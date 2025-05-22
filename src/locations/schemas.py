@@ -25,6 +25,7 @@ class SLocationRead(OrmModel):
     name: str
     parent_id: Optional[int]
     description: Optional[str]
+    created_by: int 
     children: List['SLocationRead'] = []
     devices: List[SDeviceInLocation] = []
 

@@ -15,6 +15,7 @@ router = APIRouter(
     tags=["Регламентные работы"],
 )
 
+
 @router.get(
     "/",
     response_model=List[SMaintenanceTaskRead],
@@ -36,10 +37,12 @@ async def list_tasks(
         status=status,
         scheduled_from=scheduled_from,
         scheduled_to=scheduled_to,
+        creator_user_id=current_user.id,
         offset=offset,
         limit=limit,
     )
     return [SMaintenanceTaskRead.model_validate(t) for t in tasks]
+
 
 @router.get(
     "/{task_id}",
@@ -52,8 +55,11 @@ async def get_task(
 ) -> SMaintenanceTaskRead:
     task = await MaintenanceTaskDAO.find_by_id(task_id)
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
     return SMaintenanceTaskRead.model_validate(task)
+
 
 @router.post(
     "/",
@@ -69,7 +75,7 @@ async def create_task(
     if not device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Device with id={data.device_id} not found"
+            detail=f"Device with id={data.device_id} not found",
         )
 
     payload = data.model_dump(exclude_none=True)
@@ -94,9 +100,12 @@ async def update_task(
     payload = data.model_dump(exclude_none=True)
     updated = await MaintenanceTaskDAO.update(task_id, **payload)
     if not updated:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
     task = await MaintenanceTaskDAO.find_by_id(task_id)
     return SMaintenanceTaskRead.model_validate(task)
+
 
 @router.delete(
     "/{task_id}",
@@ -109,5 +118,7 @@ async def delete_task(
 ):
     success = await MaintenanceTaskDAO.delete(task_id)
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

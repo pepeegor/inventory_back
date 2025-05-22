@@ -5,11 +5,14 @@ from src.movements.models import Movement
 from src.dao.base import BaseDAO
 from src.database import async_session_maker
 
+
 class MovementDAO(BaseDAO):
     model: Type[Movement] = Movement
 
     @classmethod
-    async def find_by_device_id(cls, device_id: Any) -> List[Movement]:
+    async def find_by_device_id(
+        cls, device_id: Any, user_id: Optional[int] = None
+    ) -> List[Movement]:
         async with async_session_maker() as session:
             query = (
                 select(cls.model)
@@ -21,9 +24,11 @@ class MovementDAO(BaseDAO):
                 )
                 .order_by(cls.model.moved_at.desc())
             )
+            if user_id is not None:
+                query = query.where(cls.model.performed_by == user_id)
             result = await session.execute(query)
             return result.scalars().all()
-    
+
     @classmethod
     async def find_by_id(cls, id_: Any) -> Optional[Movement]:
         async with async_session_maker() as session:

@@ -18,6 +18,7 @@ class Location(Base):
 
     parent = relationship('Location', remote_side=[id], back_populates='children')  # type: "Location"
     children = relationship('Location', back_populates='parent')  # type: list["Location"]
+    created_by  = Column(BigInteger, ForeignKey('users.id'), nullable=False)
 
     devices = relationship('Device', back_populates='current_location')  # type: list["Device"]
     movements_from = relationship(
@@ -27,3 +28,4 @@ class Location(Base):
         'Movement', back_populates='to_location', foreign_keys='Movement.to_location_id'
     )  # type: list["Movement"]
     inventory_events = relationship('InventoryEvent', back_populates='location')  # type: list["InventoryEvent"]
+    creator    = relationship('User', back_populates='locations_created')

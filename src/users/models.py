@@ -28,3 +28,14 @@ class User(Base):
     write_offs_approved = relationship(
         'WriteOffReport', back_populates='approved_by_user', foreign_keys='WriteOffReport.approved_by'
     )  # type: list["WriteOffReport"]
+    created_device_types = relationship(
+        'DeviceType',
+        back_populates='creator',
+        foreign_keys='DeviceType.created_by'
+    )
+    locations_created = relationship('Location', back_populates='creator')
+    created_part_types = relationship(
+        'PartType',
+        back_populates='creator',
+        foreign_keys='PartType.created_by',
+    )

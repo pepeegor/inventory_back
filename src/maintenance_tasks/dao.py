@@ -6,6 +6,7 @@ from src.database import async_session_maker
 from src.dao.base import BaseDAO
 from src.maintenance_tasks.models import MaintenanceTask
 
+
 class MaintenanceTaskDAO(BaseDAO):
     model: Type[MaintenanceTask] = MaintenanceTask
 
@@ -18,6 +19,7 @@ class MaintenanceTaskDAO(BaseDAO):
         status: Optional[str] = None,
         scheduled_from: Optional[date] = None,
         scheduled_to: Optional[date] = None,
+        creator_user_id: Optional[int] = None,
         offset: int = 0,
         limit: int = 100,
     ) -> List[MaintenanceTask]:
@@ -41,6 +43,8 @@ class MaintenanceTaskDAO(BaseDAO):
                 query = query.where(cls.model.scheduled_date >= scheduled_from)
             if scheduled_to is not None:
                 query = query.where(cls.model.scheduled_date <= scheduled_to)
+            if creator_user_id is not None:
+                query = query.where(cls.model.assigned_to == creator_user_id)
             result = await session.execute(query)
             return result.scalars().all()
 

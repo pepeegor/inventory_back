@@ -5,20 +5,22 @@ from src.dao.base import BaseDAO
 from src.database import async_session_maker
 from src.device_types.models import DeviceType
 
+
 class DeviceTypeDAO(BaseDAO):
     model: Type[DeviceType] = DeviceType
 
     @classmethod
     async def find_all(
-        cls,
-        offset: int = 0,
-        limit: int = 100,
-        **filters: Any
+        cls, *, offset: int = 0, limit: int = 100, creator_id: int, **filters: Any
     ) -> List[DeviceType]:
         async with async_session_maker() as session:
             query = (
                 select(cls.model)
-                .options(selectinload(cls.model.part_types))
+                .options(
+                    selectinload(cls.model.part_types),
+                    selectinload(cls.model.creator),
+                )
+                .where(cls.model.created_by == creator_id)
                 .offset(offset)
                 .limit(limit)
             )

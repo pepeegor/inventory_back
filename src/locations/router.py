@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_admin_user, get_current_user
 from src.locations.dao import LocationDAO
 from src.locations.schemas import (
     SLocationRead,
@@ -27,12 +27,23 @@ async def get_location(location_id: int) -> SLocationRead:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Location not found")
     return SLocationRead.model_validate(loc)
 
-@router.post("/", response_model=SLocationRead, status_code=status.HTTP_201_CREATED, summary="Создание новой локации")
-async def create_location(data: SLocationCreate) -> SLocationRead:
-    created = await LocationDAO.create(**data.model_dump())
-    # заново получить с отношениями
+@router.post(
+    "/",
+    response_model=SLocationRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создание новой локации",
+    dependencies=[Depends(get_current_admin_user)] 
+)
+async def create_location(
+    data: SLocationCreate,
+    current_user = Depends(get_current_admin_user)
+) -> SLocationRead:
+    payload = data.model_dump()
+    payload["created_by"] = current_user.id
+    created = await LocationDAO.create(**payload)
     loc = await LocationDAO.find_by_id(created.id)
     return SLocationRead.model_validate(loc)
+
 
 @router.put("/{location_id}", response_model=SLocationRead, summary="Обновление локации")
 async def update_location(location_id: int, data: SLocationUpdate) -> SLocationRead:

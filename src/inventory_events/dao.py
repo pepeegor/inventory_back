@@ -6,6 +6,7 @@ from src.database import async_session_maker
 from src.inventory_events.models import InventoryEvent
 from src.dao.base import BaseDAO
 
+
 class InventoryEventDAO(BaseDAO):
     model = InventoryEvent
 
@@ -16,6 +17,7 @@ class InventoryEventDAO(BaseDAO):
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
         location_id: Optional[int] = None,
+        user_id: Optional[int] = None,
         offset: int = 0,
         limit: int = 100
     ) -> List[InventoryEvent]:
@@ -25,7 +27,7 @@ class InventoryEventDAO(BaseDAO):
                 .options(
                     selectinload(cls.model.location),
                     selectinload(cls.model.performed_by_user),
-                    selectinload(cls.model.items)
+                    selectinload(cls.model.items),
                 )
                 .offset(offset)
                 .limit(limit)
@@ -36,6 +38,8 @@ class InventoryEventDAO(BaseDAO):
                 query = query.where(cls.model.event_date <= date_to)
             if location_id:
                 query = query.where(cls.model.location_id == location_id)
+            if user_id:
+                query = query.where(cls.model.performed_by == user_id)
             result = await session.execute(query)
             return result.scalars().all()
 
@@ -48,7 +52,7 @@ class InventoryEventDAO(BaseDAO):
                 .options(
                     selectinload(cls.model.location),
                     selectinload(cls.model.performed_by_user),
-                    selectinload(cls.model.items)
+                    selectinload(cls.model.items),
                 )
             )
             result = await session.execute(query)
