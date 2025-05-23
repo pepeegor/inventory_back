@@ -1,5 +1,5 @@
 from typing import Any, Optional, List, Type
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload, joinedload
 from src.dao.base import BaseDAO
 from src.database import async_session_maker
@@ -24,7 +24,7 @@ class DeviceDAO(BaseDAO):
         current_location_id: int | None = None
     ) -> List[Device]:
         """
-        Возвращает только те устройства, у которых current_location.created_by == creator_id.
+        Возвращает устройства, у которых current_location.created_by == creator_id или created_by == creator_id
         """
         async with async_session_maker() as session:
             q = (
@@ -36,8 +36,13 @@ class DeviceDAO(BaseDAO):
                     selectinload(cls.model.current_location),
                 )
                 # join на Location, чтобы фильтровать по created_by
-                .join(cls.model.current_location)
-                .where(Location.created_by == creator_id)
+                .outerjoin(cls.model.current_location)
+                .where(
+                    or_(
+                        Location.created_by == creator_id,
+                        cls.model.created_by == creator_id,
+                    )
+                )
                 .offset(offset)
                 .limit(limit)
             )
@@ -54,7 +59,8 @@ class DeviceDAO(BaseDAO):
     @classmethod
     async def find_by_id(cls, id_: Any, *, creator_id: int) -> Optional[Device]:
         """
-        Тот же join+фильтр по created_by, чтобы не дать посмотреть чужое устройство.
+        Возвращает устройство, если оно принадлежит пользователю (created_by == creator_id) или находится
+        в локации пользователя (current_location.created_by == creator_id)
         """
         async with async_session_maker() as session:
             q = (
@@ -64,9 +70,14 @@ class DeviceDAO(BaseDAO):
                     selectinload(cls.model.type).selectinload(DeviceType.part_types),
                     selectinload(cls.model.current_location),
                 )
-                .join(cls.model.current_location)
+                .outerjoin(cls.model.current_location)
                 .where(cls.model.id == id_)
-                .where(Location.created_by == creator_id)
+                .where(
+                    or_(
+                        Location.created_by == creator_id,
+                        cls.model.created_by == creator_id,
+                    )
+                )
             )
             result = await session.execute(q)
             return result.scalars().first()

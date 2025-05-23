@@ -34,7 +34,7 @@ async def list_movements(
 async def create_movement(
     device_id: int, data: SMovementCreate, current_user=Depends(get_current_user)
 ) -> SMovementRead:
-    device = await DeviceDAO.find_by_id(device_id)
+    device = await DeviceDAO.find_by_id(device_id, creator_id=current_user.id)
     if not device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Устройство не найдено"

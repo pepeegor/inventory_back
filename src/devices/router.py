@@ -97,7 +97,11 @@ async def create_device(
             if not loc:
                 raise HTTPException(404, "Location not found or not yours")
 
-        created = await DeviceDAO.create(**data.model_dump())
+        # Добавляем created_by при создании устройства
+        device_data = data.model_dump()
+        device_data["created_by"] = current_user.id
+
+        created = await DeviceDAO.create(**device_data)
         device = await DeviceDAO.find_by_id(created.id, creator_id=current_user.id)
         return SDeviceRead.model_validate(device)
     except IntegrityError:
@@ -124,9 +128,7 @@ async def update_device(
             if not await DeviceTypeDAO.find_by_id(payload["type_id"]):
                 raise HTTPException(404, "DeviceType not found")
         if payload.get("current_location_id") is not None:
-            loc = await LocationDAO.find_by_id(
-                payload["current_location_id"]
-            )
+            loc = await LocationDAO.find_by_id(payload["current_location_id"])
             if not loc:
                 raise HTTPException(404, "Location not found or not yours")
 

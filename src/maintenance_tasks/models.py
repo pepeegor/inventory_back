@@ -19,5 +19,5 @@ class MaintenanceTask(Base):
     assigned_to = Column(BigInteger, ForeignKey('users.id'))
     notes = Column(Text)
 
-    device = relationship('Device', back_populates='maintenance_tasks')  # type: "Device"
-    assigned_user = relationship('User', back_populates='maintenance_tasks')  # type: "User"
+    device = relationship('Device', back_populates='maintenance_tasks')  
+    assigned_user = relationship('User', back_populates='maintenance_tasks') 

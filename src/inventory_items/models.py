@@ -17,5 +17,5 @@ class InventoryItem(Base):
     condition = Column(String(50))
     comments = Column(Text)
 
-    event = relationship('InventoryEvent', back_populates='items')  # type: "InventoryEvent"
-    device = relationship('Device', back_populates='inventory_items')  # type: "Device"
+    event = relationship('InventoryEvent', back_populates='items') 
+    device = relationship('Device', back_populates='inventory_items')  

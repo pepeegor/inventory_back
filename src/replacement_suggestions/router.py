@@ -1,5 +1,3 @@
-# src/replacement_suggestions/router.py
-
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response

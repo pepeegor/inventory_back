@@ -16,6 +16,7 @@ from src.replacement_suggestions.router import router as router_replacement_sugg
 from src.write_off_reports.router import router as router_reports
 from src.analytics.router import router as router_analytics
 from src.users.router import router as router_users
+from src.stats.router import router as router_stats
 from src.tasks.warranty_suggestions import start_scheduler
 from src.exception_handlers import add_exception_handlers
 
@@ -32,7 +33,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Add exception handlers
-add_exception_handlers(app)
+# add_exception_handlers(app)
 
 app.include_router(router_auth)
 app.include_router(router_users)
@@ -48,6 +49,7 @@ app.include_router(router_failure)
 app.include_router(router_replacement_suggestions)
 app.include_router(router_reports)
 app.include_router(router_analytics)
+app.include_router(router_stats)
 
 origins = ["http://localhost:5173"]
 

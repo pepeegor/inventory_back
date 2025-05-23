@@ -39,3 +39,55 @@ class DeviceTypeDAO(BaseDAO):
             )
             result = await session.execute(query)
             return result.scalars().first()
+
+    @classmethod
+    async def create(cls, **data: Any) -> DeviceType:
+        """
+        Создаёт новый объект DeviceType и загружает связанные объекты перед возвращением
+        """
+        async with async_session_maker() as session:
+            instance = cls.model(**data)
+            session.add(instance)
+            await session.commit()
+
+            # Перезагружаем объект из базы со связанными сущностями
+            await session.refresh(instance)
+
+            # Явно загружаем связанные сущности
+            query = (
+                select(cls.model)
+                .where(cls.model.id == instance.id)
+                .options(selectinload(cls.model.part_types))
+            )
+            result = await session.execute(query)
+            loaded_instance = result.scalar_one_or_none()
+
+            return loaded_instance or instance
+
+    @classmethod
+    async def update(cls, id_: Any, **data: Any) -> Optional[DeviceType]:
+        """
+        Обновляет объект DeviceType и загружает связанные объекты перед возвращением
+        """
+        async with async_session_maker() as session:
+            result = await session.execute(select(cls.model).where(cls.model.id == id_))
+            instance = result.scalars().first()
+            if not instance:
+                return None
+
+            for key, value in data.items():
+                setattr(instance, key, value)
+
+            await session.commit()
+            await session.refresh(instance)
+
+            # Явно загружаем связанные сущности
+            query = (
+                select(cls.model)
+                .where(cls.model.id == instance.id)
+                .options(selectinload(cls.model.part_types))
+            )
+            result = await session.execute(query)
+            loaded_instance = result.scalar_one_or_none()
+
+            return loaded_instance or instance

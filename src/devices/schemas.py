@@ -57,5 +57,6 @@ class SDeviceRead(OrmModel):
     status: str
     type: SSimpleDeviceTypeRead
     current_location: Optional[SLocationInDevice]
+    created_by: int
 
     model_config = {"from_attributes": True}

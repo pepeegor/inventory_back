@@ -79,7 +79,7 @@ async def create_failure_record(
         description=data.description,
     )
     try:
-        await DeviceDAO.update(data.device_id, status="failed")
+        await DeviceDAO.update(data.device_id, status="Decommissioned")
     except SQLAlchemyError:
         pass
 
@@ -120,4 +120,8 @@ async def delete_failure_record(
         raise HTTPException(status_code=404, detail="FailureRecord not found")
 
     await FailureRecordDAO.delete(failure_id)
+    try:
+        await DeviceDAO.update(data.device_id, status="Active")
+    except SQLAlchemyError:
+        pass
     return Response(status_code=status.HTTP_204_NO_CONTENT)

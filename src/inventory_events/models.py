@@ -17,6 +17,6 @@ class InventoryEvent(Base):
     performed_by = Column(BigInteger, ForeignKey('users.id'))
     notes = Column(Text)
 
-    location = relationship('Location', back_populates='inventory_events')  # type: "Location"
-    performed_by_user = relationship('User', back_populates='inventory_events')  # type: "User"
-    items = relationship('InventoryItem', back_populates='event')  # type: list["InventoryItem"]
+    location = relationship('Location', back_populates='inventory_events') 
+    performed_by_user = relationship('User', back_populates='inventory_events')  
+    items = relationship('InventoryItem', back_populates='event')  
