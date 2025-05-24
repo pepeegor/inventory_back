@@ -61,8 +61,6 @@ async def get_datacenter_activity():
         else:
             raise Exception("No data from Prometheus")
     except Exception as e:
-        # Можно залогировать ошибку, если нужно:
-        # import logging; logging.getLogger(__name__).warning(f"Prometheus error: {e}")
         for i in range(25):
             ts = (start + timedelta(hours=i)).timestamp()
             timestamps.append(datetime.fromtimestamp(ts, tz=timezone.utc).isoformat())
