@@ -1,5 +1,5 @@
 from typing import Any, Optional, List, Type
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.orm import selectinload, joinedload
 from src.dao.base import BaseDAO
 from src.database import async_session_maker
@@ -130,3 +130,19 @@ class DeviceDAO(BaseDAO):
             )
             result = await session.execute(q)
             return result.scalars().first()
+
+    @classmethod
+    async def count_all(cls) -> int:
+        async with async_session_maker() as session:
+            result = await session.execute(select(func.count(cls.model.id)))
+            return result.scalar()
+
+    @classmethod
+    async def count_created_between(cls, start, end) -> int:
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(func.count(cls.model.id)).where(
+                    cls.model.purchase_date >= start, cls.model.purchase_date < end
+                )
+            )
+            return result.scalar()

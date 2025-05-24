@@ -1,5 +1,5 @@
 from typing import Any, Optional, List, Type
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
 from src.dao.base import BaseDAO
 from src.database import async_session_maker
@@ -84,3 +84,9 @@ class FailureRecordDAO(BaseDAO):
             )
             result = await session.execute(q)
             return result.scalars().all()
+
+    @classmethod
+    async def count_all(cls) -> int:
+        async with async_session_maker() as session:
+            result = await session.execute(select(func.count(cls.model.id)))
+            return result.scalar()

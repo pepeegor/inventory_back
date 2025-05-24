@@ -54,3 +54,23 @@ async def authenticate_user(email: EmailStr, password: Union[str, SecretStr]):
     except Exception as e:
         logger.error(f"Error during authentication: {str(e)}", exc_info=True)
         raise
+
+
+async def authenticate_user_by_username(username: str, password: Union[str, SecretStr]):
+    try:
+        logger.info(f"Authenticating user with username: {username}")
+        user = await UserDAO.find_by_username(username)
+        if not user:
+            logger.info(f"User with username {username} not found")
+            return None
+
+        logger.info(f"Verifying password for user {username}")
+        if not verify_password(password, user.password_hash):
+            logger.info(f"Invalid password for user {username}")
+            return None
+
+        logger.info(f"Authentication successful for user {username}")
+        return user
+    except Exception as e:
+        logger.error(f"Error during authentication: {str(e)}", exc_info=True)
+        raise

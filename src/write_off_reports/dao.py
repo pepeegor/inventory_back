@@ -1,10 +1,11 @@
 from typing import Any, Optional, List, Type
 from datetime import date
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from sqlalchemy.orm import selectinload
 from src.dao.base import BaseDAO
 from src.database import async_session_maker
 from src.write_off_reports.models import WriteOffReport
+
 
 class WriteOffReportDAO(BaseDAO):
     model: Type[WriteOffReport] = WriteOffReport
@@ -14,7 +15,7 @@ class WriteOffReportDAO(BaseDAO):
         cls,
         *,
         date_from: date | None = None,
-        date_to:   date | None = None,
+        date_to: date | None = None,
         disposed_by: int | None = None,
         approved_by: int | None = None
     ) -> List[WriteOffReport]:
@@ -22,7 +23,7 @@ class WriteOffReportDAO(BaseDAO):
             query = select(cls.model).options(
                 selectinload(cls.model.device),
                 selectinload(cls.model.disposed_by_user),
-                selectinload(cls.model.approved_by_user)
+                selectinload(cls.model.approved_by_user),
             )
             filters: list[Any] = []
             if date_from is not None:
@@ -48,7 +49,13 @@ class WriteOffReportDAO(BaseDAO):
                 .options(
                     selectinload(cls.model.device),
                     selectinload(cls.model.disposed_by_user),
-                    selectinload(cls.model.approved_by_user)
+                    selectinload(cls.model.approved_by_user),
                 )
             )
             return result.scalars().first()
+
+    @classmethod
+    async def count_all(cls) -> int:
+        async with async_session_maker() as session:
+            result = await session.execute(select(func.count(cls.model.id)))
+            return result.scalar()

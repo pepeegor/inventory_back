@@ -19,6 +19,7 @@ from src.devices.models import Device
 from src.device_types.models import DeviceType
 from src.maintenance_tasks.models import MaintenanceTask
 from src.failure_records.models import FailureRecord
+from src.write_off_reports.dao import WriteOffReportDAO
 
 router = APIRouter(
     prefix="/analytics",
@@ -109,6 +110,14 @@ async def summary_stats(current_user=Depends(get_current_user)):
             )
         ).all()
         manufacturer_counts = {m: c for m, c in manufacturers}
+        # Количество списанных устройств
+        decommissioned_count = (
+            await session.execute(
+                select(func.count(Device.id)).where(Device.status == "decommissioned")
+            )
+        ).scalar()
+        # Количество отчётов о списании
+        writeoff_reports_count = len(await WriteOffReportDAO.find_all())
     return {
         "total_devices": total_devices,
         "status_counts": status_counts,
@@ -117,6 +126,8 @@ async def summary_stats(current_user=Depends(get_current_user)):
         "maintenance_counts": maint_counts,
         "avg_device_age_days": round(avg_age, 1) if avg_age else None,
         "devices_by_manufacturer": manufacturer_counts,
+        "decommissioned_devices": decommissioned_count,
+        "writeoff_reports_count": writeoff_reports_count,
     }
 
 
@@ -166,6 +177,12 @@ async def summary_stats_xlsx(current_user=Depends(get_current_user)):
             )
         ).all()
         manufacturer_counts = {m: c for m, c in manufacturers}
+        decommissioned_count = (
+            await session.execute(
+                select(func.count(Device.id)).where(Device.status == "decommissioned")
+            )
+        ).scalar()
+        writeoff_reports_count = len(await WriteOffReportDAO.find_all())
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -227,6 +244,15 @@ async def summary_stats_xlsx(current_user=Depends(get_current_user)):
 
     # По производителям
     add_section("Устройства по производителям", manufacturer_counts.items())
+
+    # Списанное оборудование
+    add_section(
+        "Списанное оборудование",
+        [
+            ("Списанных устройств", decommissioned_count),
+            ("Отчётов о списании", writeoff_reports_count),
+        ],
+    )
 
     # Границы для всех ячеек с данными
     for r in ws.iter_rows(min_row=3, max_row=row - 1, min_col=1, max_col=2):

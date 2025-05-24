@@ -1,6 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqladmin import Admin
+from prometheus_client import Gauge, Counter
+from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.auth.router import router as router_auth
 from src.part_types.router import router as router_part_types
@@ -20,8 +24,23 @@ from src.write_off_reports.router import router as router_reports
 from src.analytics.router import router as router_analytics
 from src.users.router import router as router_users
 from src.stats.router import router as router_stats
+from src.adminpanel.views import (
+    UserAdmin,
+    DeviceAdmin,
+    DeviceTypeAdmin,
+    LocationAdmin,
+    PartTypeAdmin,
+    FailureRecordAdmin,
+    MaintenanceTaskAdmin,
+    InventoryItemAdmin,
+    InventoryEventAdmin,
+    MovementAdmin,
+    WriteOffReportAdmin,
+    ReplacementSuggestionAdmin,
+)
+from src.adminpanel.auth import authentication_backend
+from src.database import engine
 from src.tasks.warranty_suggestions import start_scheduler
-from src.exception_handlers import add_exception_handlers
 
 
 @asynccontextmanager
@@ -34,9 +53,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-# Add exception handlers
-# add_exception_handlers(app)
 
 app.include_router(router_auth)
 app.include_router(router_users)
@@ -55,6 +71,21 @@ app.include_router(router_reports)
 app.include_router(router_analytics)
 app.include_router(router_stats)
 
+admin = Admin(app, engine, authentication_backend=authentication_backend)
+
+admin.add_view(UserAdmin)
+admin.add_view(DeviceAdmin)
+admin.add_view(DeviceTypeAdmin)
+admin.add_view(LocationAdmin)
+admin.add_view(PartTypeAdmin)
+admin.add_view(FailureRecordAdmin)
+admin.add_view(MaintenanceTaskAdmin)
+admin.add_view(InventoryItemAdmin)
+admin.add_view(InventoryEventAdmin)
+admin.add_view(MovementAdmin)
+admin.add_view(WriteOffReportAdmin)
+admin.add_view(ReplacementSuggestionAdmin)
+
 origins = ["http://localhost:5173"]
 
 app.add_middleware(
@@ -64,3 +95,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+datacenter_load_gauge = Gauge("datacenter_load", "Current datacenter load", ["hour"])
+backend_action_counter = Counter(
+    "backend_action_total", "Total backend actions", ["action"]
+)
+
+
+class ActionCounterMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        action = f"{request.method}_{request.url.path}"
+        backend_action_counter.labels(action=action).inc()
+        response = await call_next(request)
+        return response
+
+
+app.add_middleware(ActionCounterMiddleware)
+
+Instrumentator().instrument(app).expose(app)

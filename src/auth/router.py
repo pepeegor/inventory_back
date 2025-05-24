@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import logging
+import requests
 
 from src.exceptions import BadRequestException, UnauthorizedException
 from src.auth.auth import authenticate_user, create_access_token, get_password_hash
