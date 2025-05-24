@@ -7,6 +7,7 @@ from src.failure_records.models import FailureRecord
 from src.devices.models import Device
 from src.locations.models import Location
 
+
 class FailureRecordDAO(BaseDAO):
     model: Type[FailureRecord] = FailureRecord
 
@@ -51,9 +52,7 @@ class FailureRecordDAO(BaseDAO):
             return result.scalars().all()
 
     @classmethod
-    async def find_by_id(
-        cls, id_: Any, *, creator_id: int
-    ) -> Optional[FailureRecord]:
+    async def find_by_id(cls, id_: Any, *, creator_id: int) -> Optional[FailureRecord]:
         async with async_session_maker() as session:
             q = (
                 select(cls.model)
@@ -68,3 +67,20 @@ class FailureRecordDAO(BaseDAO):
             )
             result = await session.execute(q)
             return result.scalars().first()
+
+    @classmethod
+    async def find_all_by_creator_id(cls, *, creator_id: int) -> List[FailureRecord]:
+        async with async_session_maker() as session:
+            q = (
+                select(cls.model)
+                .join(cls.model.device)
+                .join(Device.current_location)
+                .where(Location.created_by == creator_id)
+                .options(
+                    selectinload(cls.model.part_type),
+                    selectinload(cls.model.device),
+                )
+                .order_by(cls.model.failure_date.desc())
+            )
+            result = await session.execute(q)
+            return result.scalars().all()

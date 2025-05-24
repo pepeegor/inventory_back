@@ -70,8 +70,9 @@ async def get_report(report_id: int) -> SWriteOffReportRead:
 async def create_report(
     data: SWriteOffReportCreate, current_user=Depends(get_current_user)
 ) -> SWriteOffReportRead:
-    if not await DeviceDAO.find_by_id(data.device_id):
-        raise HTTPException(status_code=404, detail="Device not found")
+    # Check if device exists and user has access to it
+    if not await DeviceDAO.find_by_id(data.device_id, creator_id=current_user.id):
+        raise HTTPException(status_code=404, detail="Device not found or access denied")
 
     payload = data.model_dump(exclude={"disposed_by", "approved_by"})
     payload["disposed_by"] = current_user.id
@@ -141,6 +142,20 @@ async def approve_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
+    if report.approved_by is not None:
+        raise HTTPException(status_code=400, detail="Report already approved")
+
+    # Use admin method to find and update device
+    device = await DeviceDAO.find_by_id_admin(report.device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    # Update device status
+    updated_device = await DeviceDAO.update_status(device.id, "decommissioned")
+    if not updated_device:
+        raise HTTPException(status_code=500, detail="Failed to update device status")
+
+    # Approve the report
     updated = await WriteOffReportDAO.update(report_id, approved_by=current_user.id)
     if not updated:
         raise HTTPException(status_code=500, detail="Failed to approve report")

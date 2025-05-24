@@ -11,7 +11,12 @@ class DeviceTypeDAO(BaseDAO):
 
     @classmethod
     async def find_all(
-        cls, *, offset: int = 0, limit: int = 100, creator_id: int, **filters: Any
+        cls,
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        creator_id: Optional[int] = None,
+        **filters: Any
     ) -> List[DeviceType]:
         async with async_session_maker() as session:
             query = (
@@ -20,10 +25,11 @@ class DeviceTypeDAO(BaseDAO):
                     selectinload(cls.model.part_types),
                     selectinload(cls.model.creator),
                 )
-                .where(cls.model.created_by == creator_id)
                 .offset(offset)
                 .limit(limit)
             )
+            if creator_id is not None:
+                query = query.where(cls.model.created_by == creator_id)
             if filters:
                 query = query.filter_by(**filters)
             result = await session.execute(query)

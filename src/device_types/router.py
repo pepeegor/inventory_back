@@ -18,7 +18,27 @@ router = APIRouter(
 
 
 @router.get(
-    "/", response_model=List[SDeviceTypeRead], summary="Список своих типов устройств"
+    "/", response_model=List[SDeviceTypeRead], summary="Список всех типов устройств"
+)
+async def list_device_types(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    part_type_id: Optional[int] = Query(None, description="Фильтр по типу детали"),
+    current_user=Depends(get_current_user),
+):
+    filters = {}
+    if part_type_id is not None:
+        filters["part_type_id"] = part_type_id
+
+    try:
+        items = await DeviceTypeDAO.find_all(offset=offset, limit=limit, **filters)
+        return [SDeviceTypeRead.model_validate(it) for it in items]
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+@router.get(
+    "/my", response_model=List[SDeviceTypeRead], summary="Список своих типов устройств"
 )
 async def list_my_device_types(
     offset: int = Query(0, ge=0),
@@ -42,11 +62,11 @@ async def list_my_device_types(
 @router.get(
     "/{type_id}",
     response_model=SDeviceTypeRead,
-    summary="Детальная информация о своём типе устройства",
+    summary="Детальная информация о типе устройства",
 )
-async def get_my_device_type(type_id: int, current_user=Depends(get_current_user)):
+async def get_device_type(type_id: int, current_user=Depends(get_current_user)):
     dt = await DeviceTypeDAO.find_by_id(type_id)
-    if not dt or dt.created_by != current_user.id:
+    if not dt:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return SDeviceTypeRead.model_validate(dt)
 
@@ -81,7 +101,7 @@ async def update_device_type(
 ):
     existing = await DeviceTypeDAO.find_by_id(type_id)
     if not existing or existing.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Вы должны быть создателем для изменения")
 
     payload = data.model_dump(exclude_none=True)
     if "part_type_id" in payload:

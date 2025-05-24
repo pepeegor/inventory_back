@@ -19,62 +19,50 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[SDeviceRead], summary="Список всех устройств")
+@router.get(
+    "/",
+    response_model=List[SDeviceRead],
+    summary="Список устройств",
+)
 async def list_devices(
-    type_id: Optional[int] = Query(None),
-    status: Optional[str] = Query(None),
-    current_location_id: Optional[int] = Query(None),
+    type_id: Optional[int] = Query(None, description="Фильтр по типу устройства"),
+    status: Optional[str] = Query(None, description="Фильтр по статусу"),
+    current_location_id: Optional[int] = Query(
+        None, description="Фильтр по текущей локации"
+    ),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     current_user=Depends(get_current_user),
-):
-    try:
-        devices = await DeviceDAO.find_all(
-            creator_id=current_user.id,
-            offset=offset,
-            limit=limit,
-            type_id=type_id,
-            status=status,
-            current_location_id=current_location_id,
-        )
-
-        # Создадим список устройств с обработкой ошибок для каждого устройства отдельно
-        result = []
-        for device in devices:
-            try:
-                device_schema = SDeviceRead.model_validate(device)
-                result.append(device_schema)
-            except ValidationError as e:
-                logger.error(f"ValidationError for device {device.id}: {str(e)}")
-                # We still want to include this device in results, just with minimal data
-                # This is a fallback solution, our schema changes should prevent this error
-                continue
-
-        return result
-    except SQLAlchemyError as e:
-        logger.error(f"Database error while listing devices: {str(e)}", exc_info=True)
-        raise HTTPException(500, f"Database error while listing devices: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        raise HTTPException(500, f"Unexpected error: {str(e)}")
+) -> List[SDeviceRead]:
+    devices = await DeviceDAO.find_all(
+        creator_id=current_user.id,
+        is_admin=current_user.role == "admin",
+        type_id=type_id,
+        status=status,
+        current_location_id=current_location_id,
+        offset=offset,
+        limit=limit,
+    )
+    return [SDeviceRead.model_validate(d) for d in devices]
 
 
-@router.get("/{device_id}", response_model=SDeviceRead, summary="Карточка устройства")
+@router.get(
+    "/{device_id}",
+    response_model=SDeviceRead,
+    summary="Детали устройства",
+)
 async def get_device(
-    device_id: int,
-    current_user=Depends(get_current_user),
-):
-    try:
-        device = await DeviceDAO.find_by_id(device_id, creator_id=current_user.id)
-        if not device:
-            raise HTTPException(404, "Device not found")
-        return SDeviceRead.model_validate(device)
-    except ValidationError as e:
-        logger.error(f"Error serializing device {device_id}: {str(e)}")
-        raise HTTPException(500, f"Error formatting device data: {str(e)}")
-    except SQLAlchemyError as e:
-        logger.error(f"Database error while fetching device: {str(e)}")
-        raise HTTPException(500, f"Database error while fetching device: {str(e)}")
+    device_id: int, current_user=Depends(get_current_user)
+) -> SDeviceRead:
+    device = await DeviceDAO.find_by_id(
+        device_id, creator_id=current_user.id, is_admin=current_user.role == "admin"
+    )
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Device with id={device_id} not found",
+        )
+    return SDeviceRead.model_validate(device)
 
 
 @router.post(

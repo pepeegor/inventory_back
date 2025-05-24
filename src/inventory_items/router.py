@@ -6,28 +6,29 @@ from src.inventory_items.dao import InventoryItemDAO
 from src.inventory_items.schemas import (
     SInventoryItemRead,
     SInventoryItemCreate,
-    SInventoryItemUpdate
+    SInventoryItemUpdate,
 )
 from src.inventory_events.dao import InventoryEventDAO
 
 router = APIRouter(tags=["Инвентаризация по устройству"])
+
 
 @router.post(
     "/inventory-events/{event_id}/items",
     response_model=SInventoryItemRead,
     status_code=status.HTTP_201_CREATED,
     summary="Добавить результат инвентаризации по устройству",
-    dependencies=[Depends(get_current_user)]
 )
 async def create_inventory_item(
-    event_id: int,
-    data: SInventoryItemCreate
+    event_id: int, data: SInventoryItemCreate, current_user=Depends(get_current_user)
 ) -> SInventoryItemRead:
     event = await InventoryEventDAO.find_by_id(event_id)
     if not event:
         raise HTTPException(status_code=404, detail="InventoryEvent not found")
 
-    device = await DeviceDAO.find_by_id(data.device_id)
+    # Используем find_by_id_admin для поиска устройства, так как при инвентаризации
+    # нам нужно видеть все устройства в локации
+    device = await DeviceDAO.find_by_id_admin(data.device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
@@ -37,17 +38,16 @@ async def create_inventory_item(
             detail=(
                 f"Device (id={device.id}) находится в локации "
                 f"{device.current_location_id}, а не в {event.location_id}"
-            )
+            ),
         )
 
     existing = await InventoryItemDAO.find_one_or_none(
-        inventory_event_id=event_id,
-        device_id=data.device_id
+        inventory_event_id=event_id, device_id=data.device_id
     )
     if existing:
         raise HTTPException(
             status_code=400,
-            detail=f"Результат инвентаризации для device_id={data.device_id} уже существует"
+            detail=f"Результат инвентаризации для device_id={data.device_id} уже существует",
         )
 
     payload = data.model_dump(exclude_none=True)
@@ -60,11 +60,9 @@ async def create_inventory_item(
     "/inventory-items/{item_id}",
     response_model=SInventoryItemRead,
     summary="Обновить запись результата инвентаризации",
-    dependencies=[Depends(get_current_user)]
 )
 async def update_inventory_item(
-    item_id: int,
-    data: SInventoryItemUpdate
+    item_id: int, data: SInventoryItemUpdate, current_user=Depends(get_current_user)
 ) -> SInventoryItemRead:
     payload = data.model_dump(exclude_none=True)
     updated = await InventoryItemDAO.update(item_id, **payload)
@@ -77,9 +75,8 @@ async def update_inventory_item(
     "/inventory-items/{item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Удалить запись результата инвентаризации",
-    dependencies=[Depends(get_current_user)]
 )
-async def delete_inventory_item(item_id: int):
+async def delete_inventory_item(item_id: int, current_user=Depends(get_current_user)):
     deleted = await InventoryItemDAO.delete(item_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="InventoryItem not found")

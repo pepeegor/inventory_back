@@ -20,6 +20,7 @@ class MaintenanceTaskDAO(BaseDAO):
         scheduled_from: Optional[date] = None,
         scheduled_to: Optional[date] = None,
         creator_user_id: Optional[int] = None,
+        is_admin: bool = False,
         offset: int = 0,
         limit: int = 100,
     ) -> List[MaintenanceTask]:
@@ -43,7 +44,7 @@ class MaintenanceTaskDAO(BaseDAO):
                 query = query.where(cls.model.scheduled_date >= scheduled_from)
             if scheduled_to is not None:
                 query = query.where(cls.model.scheduled_date <= scheduled_to)
-            if creator_user_id is not None:
+            if not is_admin and creator_user_id is not None:
                 query = query.where(cls.model.assigned_to == creator_user_id)
             result = await session.execute(query)
             return result.scalars().all()

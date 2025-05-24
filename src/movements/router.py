@@ -1,6 +1,7 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from src.auth.dependencies import get_current_user
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from src.auth.dependencies import get_current_user, get_current_admin_user
 from src.movements.dao import MovementDAO
 from src.movements.schemas import SMovementRead, SMovementCreate
 from src.devices.dao import DeviceDAO
@@ -9,6 +10,49 @@ router = APIRouter(
     prefix="/devices/{device_id}/movements",
     tags=["Перемещения устройств"],
 )
+
+# Создаем отдельный роутер для админского эндпоинта
+admin_router = APIRouter(
+    prefix="/movements",
+    tags=["Перемещения устройств (админ)"],
+)
+
+
+@admin_router.get(
+    "/",
+    response_model=List[SMovementRead],
+    summary="Список всех перемещений (только для админов)",
+)
+async def list_all_movements(
+    device_id: Optional[int] = Query(None, description="Фильтр по устройству"),
+    performed_by: Optional[int] = Query(None, description="Фильтр по исполнителю"),
+    from_location_id: Optional[int] = Query(
+        None, description="Фильтр по начальной локации"
+    ),
+    to_location_id: Optional[int] = Query(
+        None, description="Фильтр по конечной локации"
+    ),
+    moved_from: Optional[datetime] = Query(
+        None, description="Фильтр по дате перемещения (от)"
+    ),
+    moved_to: Optional[datetime] = Query(
+        None, description="Фильтр по дате перемещения (до)"
+    ),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    current_user=Depends(get_current_admin_user),
+) -> List[SMovementRead]:
+    movements = await MovementDAO.find_all(
+        device_id=device_id,
+        performed_by=performed_by,
+        from_location_id=from_location_id,
+        to_location_id=to_location_id,
+        moved_from=moved_from,
+        moved_to=moved_to,
+        offset=offset,
+        limit=limit,
+    )
+    return [SMovementRead.model_validate(m) for m in movements]
 
 
 @router.get(

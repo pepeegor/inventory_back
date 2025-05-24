@@ -42,7 +42,6 @@ class SSimpleDeviceTypeRead(OrmModel):
     model: Optional[str]
     expected_lifetime_months: Optional[int]
     part_type_id: int
-    # Change from dict to None, we'll use to_orm_model method instead
     part_types: Optional[SPartTypeSimple] = None
     created_by: int
 
@@ -54,6 +53,7 @@ class SDeviceRead(OrmModel):
     serial_number: str
     purchase_date: Optional[date]
     warranty_end: Optional[date]
+    type_id: int
     status: str
     type: SSimpleDeviceTypeRead
     current_location: Optional[SLocationInDevice]

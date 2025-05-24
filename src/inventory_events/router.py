@@ -34,6 +34,7 @@ async def list_inventory_events(
         date_to=date_to,
         location_id=location_id,
         user_id=current_user.id,
+        is_admin=current_user.role == "admin",
         offset=offset,
         limit=limit,
     )

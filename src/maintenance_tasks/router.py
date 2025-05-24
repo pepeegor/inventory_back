@@ -38,6 +38,7 @@ async def list_tasks(
         scheduled_from=scheduled_from,
         scheduled_to=scheduled_to,
         creator_user_id=current_user.id,
+        is_admin=current_user.role == "admin",
         offset=offset,
         limit=limit,
     )
@@ -71,7 +72,11 @@ async def create_task(
     data: SMaintenanceTaskCreate,
     current_user=Depends(get_current_user),
 ) -> SMaintenanceTaskRead:
-    device = await DeviceDAO.find_by_id(data.device_id)
+    device = await DeviceDAO.find_by_id(
+        data.device_id,
+        creator_id=current_user.id,
+        is_admin=current_user.role == "admin",
+    )
     if not device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

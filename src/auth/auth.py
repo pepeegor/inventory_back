@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from pydantic import EmailStr, SecretStr
 import logging
+from typing import Union
 
 from src.users.dao import UserDAO
 from src.config import settings
@@ -13,7 +14,11 @@ logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+def verify_password(
+    plain_password: Union[str, SecretStr], hashed_password: str
+) -> bool:
+    if isinstance(plain_password, SecretStr):
+        plain_password = plain_password.get_secret_value()
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -31,7 +36,7 @@ def create_access_token(data: dict) -> str:
     return encoded_jwt
 
 
-async def authenticate_user(email: EmailStr, password: SecretStr):
+async def authenticate_user(email: EmailStr, password: Union[str, SecretStr]):
     try:
         logger.info(f"Authenticating user with email: {email}")
         user = await UserDAO.find_one_or_none(email=email)
@@ -40,7 +45,7 @@ async def authenticate_user(email: EmailStr, password: SecretStr):
             return None
 
         logger.info(f"Verifying password for user {email}")
-        if not verify_password(password.get_secret_value(), user.password_hash):
+        if not verify_password(password, user.password_hash):
             logger.info(f"Invalid password for user {email}")
             return None
 
